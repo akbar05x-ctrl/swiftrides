@@ -1,0 +1,501 @@
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import HomePage from './components/HomePage';
+import './App.css';
+
+const API = 'http://localhost:5000/api';
+const AuthContext = createContext();
+
+function App() {
+  const [auth, setAuth] = useState({
+    token: localStorage.getItem('token'),
+    user: JSON.parse(localStorage.getItem('user') || 'null')
+  });
+  const [cars, setCars] = useState([]);
+
+  useEffect(() => {
+    axios.get(`${API}/cars`).then(res => setCars(res.data)).catch(err => console.log('Error loading cars:', err));
+  }, []);
+
+  const login = (token, user) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setAuth({ token, user });
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setAuth({ token: null, user: null });
+  };
+
+  return (
+    <AuthContext.Provider value={{ auth, login, logout }}>
+      <BrowserRouter>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<HomePage cars={cars} />} />
+          <Route path="/login" element={!auth.token ? <Login /> : <Navigate to="/" />} />
+          <Route path="/register" element={!auth.token ? <Register /> : <Navigate to="/" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/dashboard" element={auth.token ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/my-bookings" element={auth.token ? <MyBookings /> : <Navigate to="/login" />} />
+          <Route path="/admin" element={auth.token && auth.user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} />
+        </Routes>
+        <Footer />
+      </BrowserRouter>
+    </AuthContext.Provider>
+  );
+}
+
+// Navbar Component - Fixed Admin Link
+function Navbar() {
+  const { auth, logout } = useContext(AuthContext);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsMenuOpen(false);
+  };
+
+  // Debug: Log user role to console
+  console.log('User role:', auth.user?.role);
+
+  return (
+    <nav className="navbar">
+      <div className="nav-container">
+        <Link to="/" className="logo">🚗 SwiftRide</Link>
+        <div className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
+          <a href="#home">HOME</a>
+          <a href="#gallery">FLEET</a>
+          <a href="#services">SERVICES</a>
+          {auth.token ? (
+            <>
+              <Link to="/dashboard">DASHBOARD</Link>
+              <Link to="/my-bookings">MY BOOKINGS</Link>
+              {/* Admin link - visible only for admin users */}
+              {auth.user?.role === 'admin' && (
+                <Link to="/admin" className="admin-link">ADMIN PANEL</Link>
+              )}
+              <button onClick={handleLogout} className="logout-btn">LOGOUT</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">LOGIN</Link>
+              <Link to="/register" className="register-btn">REGISTER</Link>
+            </>
+          )}
+        </div>
+        <div className="menu-btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <i className={`ri-${isMenuOpen ? 'close' : 'menu'}-line`}></i>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// Login Component
+function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API}/login`, { email, password });
+      login(res.data.token, res.data.user);
+      navigate('/');
+    } catch (err) {
+      setError('Invalid email or password');
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2>Welcome Back</h2>
+        <p>Login to your SwiftRide account</p>
+        {error && <div className="error">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <input type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
+          <button type="submit">Login</button>
+        </form>
+        <div className="auth-links">
+          <Link to="/forgot-password">Forgot Password?</Link>
+          <Link to="/register">Create Account</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Register Component
+function Register() {
+  const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/register`, form);
+      setMessage('Registration successful! Redirecting...');
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2>Join SwiftRide</h2>
+        <p>Create your account and start your journey</p>
+        {message && <div className={message.includes('successful') ? 'success' : 'error'}>{message}</div>}
+        <form onSubmit={handleSubmit}>
+          <input type="text" placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+          <input type="email" placeholder="Email Address" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
+          <input type="password" placeholder="Password (8+ chars, A-Z, a-z, 0-9, @#$)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
+          <input type="tel" placeholder="Phone Number" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+          <button type="submit">Register</button>
+        </form>
+        <Link to="/login">Already have an account? Login</Link>
+      </div>
+    </div>
+  );
+}
+
+// Forgot Password Component
+function ForgotPassword() {
+  const [email, setEmail] = useState('');
+  const [step, setStep] = useState(1);
+  const [token, setToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+
+  const requestReset = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API}/forgot-password`, { email });
+      setToken(res.data.resetToken);
+      setMessage('Reset token generated! Copy it below.');
+      setStep(2);
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Email not found');
+    }
+  };
+
+  const resetPassword = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/reset-password`, { token, newPassword });
+      setMessage('Password reset successful! Redirecting...');
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Reset failed');
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2>Reset Password</h2>
+        {message && <div className="info">{message}</div>}
+        {step === 1 ? (
+          <form onSubmit={requestReset}>
+            <input type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <button type="submit">Send Reset Code</button>
+          </form>
+        ) : (
+          <form onSubmit={resetPassword}>
+            <input type="text" placeholder="Reset Token" value={token} readOnly />
+            <input type="password" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+            <button type="submit">Reset Password</button>
+          </form>
+        )}
+        <Link to="/login">Back to Login</Link>
+      </div>
+    </div>
+  );
+}
+
+// Dashboard Component
+function Dashboard() {
+  const [cars, setCars] = useState([]);
+  const [selectedCar, setSelectedCar] = useState(null);
+  const [dates, setDates] = useState({ start: '', end: '' });
+  const [message, setMessage] = useState('');
+  const { auth } = useContext(AuthContext);
+
+  useEffect(() => {
+    axios.get(`${API}/cars`).then(res => setCars(res.data));
+  }, []);
+
+  const handleBooking = async (carId) => {
+    if (!dates.start || !dates.end) {
+      setMessage('Please select both pickup and dropoff dates');
+      return;
+    }
+    try {
+      await axios.post(`${API}/bookings`, {
+        car_id: carId,
+        start_date: dates.start,
+        end_date: dates.end
+      }, {
+        headers: { Authorization: `Bearer ${auth.token}` }
+      });
+      setMessage('Booking successful!');
+      setSelectedCar(null);
+      setDates({ start: '', end: '' });
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('Booking failed');
+    }
+  };
+
+  return (
+    <div className="dashboard-page">
+      <div className="container">
+        <h2>Rent Your Dream Car</h2>
+        {message && <div className="success">{message}</div>}
+        <div className="cars-grid">
+          {cars.map(car => (
+            <div key={car.id} className="car-card">
+              <img src={car.image_url || 'https://via.placeholder.com/300x200?text=Car'} alt={car.name} />
+              <h3>{car.name}</h3>
+              <p className="price">₨ {car.price_per_day}/day</p>
+              {selectedCar === car.id ? (
+                <div className="booking-form">
+                  <label>Pickup Date</label>
+                  <input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} />
+                  <label>Dropoff Date</label>
+                  <input type="date" value={dates.end} onChange={e => setDates({...dates, end: e.target.value})} />
+                  <button onClick={() => handleBooking(car.id)} className="confirm">Confirm Booking</button>
+                  <button onClick={() => setSelectedCar(null)} className="cancel">Cancel</button>
+                </div>
+              ) : (
+                <button onClick={() => setSelectedCar(car.id)} className="rent-btn">Book Now</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// My Bookings Component
+function MyBookings() {
+  const [bookings, setBookings] = useState([]);
+  const { auth } = useContext(AuthContext);
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      const res = await axios.get(`${API}/my-bookings`, {
+        headers: { Authorization: `Bearer ${auth.token}` }
+      });
+      setBookings(res.data);
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+
+  const cancelBooking = async (id) => {
+    if (window.confirm('Cancel this booking?')) {
+      await axios.put(`${API}/bookings/${id}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${auth.token}` }
+      });
+      fetchBookings();
+    }
+  };
+
+  return (
+    <div className="bookings-page">
+      <div className="container">
+        <h2>My Bookings</h2>
+        {bookings.length === 0 && <p className="no-data">No bookings yet</p>}
+        {bookings.map(booking => (
+          <div key={booking.id} className="booking-card">
+            <img src={booking.image_url || 'https://via.placeholder.com/100?text=Car'} alt={booking.car_name} />
+            <div className="booking-info">
+              <h3>{booking.car_name}</h3>
+              <p><strong>Pickup:</strong> {new Date(booking.start_date).toDateString()}</p>
+              <p><strong>Dropoff:</strong> {new Date(booking.end_date).toDateString()}</p>
+              <p><strong>Total:</strong> ₨ {booking.total_price}</p>
+              <span className={`status ${booking.status}`}>{booking.status}</span>
+            </div>
+            {booking.status === 'pending' && (
+              <button onClick={() => cancelBooking(booking.id)} className="cancel-btn">Cancel</button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Admin Panel Component - Full Featured
+function AdminPanel() {
+  const [stats, setStats] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const { auth } = useContext(AuthContext);
+
+  useEffect(() => {
+    fetchStats();
+    fetchBookings();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/stats`, { 
+        headers: { Authorization: `Bearer ${auth.token}` } 
+      });
+      setStats(res.data);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/bookings`, { 
+        headers: { Authorization: `Bearer ${auth.token}` } 
+      });
+      setBookings(res.data);
+    } catch (err) {
+      console.error('Error fetching bookings:', err);
+    }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/admin/bookings/${id}/status`, { status }, { 
+        headers: { Authorization: `Bearer ${auth.token}` } 
+      });
+      fetchBookings();
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
+  };
+
+  if (!stats) return <div className="loading">Loading Admin Dashboard...</div>;
+
+  return (
+    <div className="admin-page">
+      <div className="container">
+        <h2>Admin Dashboard</h2>
+        
+        <div className="stats-grid">
+          <div className="stat-card">
+            <h3>Total Users</h3>
+            <p>{stats.totalUsers}</p>
+          </div>
+          <div className="stat-card">
+            <h3>Total Cars</h3>
+            <p>{stats.totalCars}</p>
+          </div>
+          <div className="stat-card">
+            <h3>Total Bookings</h3>
+            <p>{stats.totalBookings}</p>
+          </div>
+          <div className="stat-card">
+            <h3>Total Revenue</h3>
+            <p>₨ {stats.totalRevenue}</p>
+          </div>
+        </div>
+        
+        <div className="admin-section">
+          <h3>All Customer Bookings</h3>
+          <table className="bookings-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Car</th>
+                <th>Pickup Date</th>
+                <th>Dropoff Date</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.map(booking => (
+                <tr key={booking.id}>
+                  <td>{booking.id}</td>
+                  <td>{booking.user_name}</td>
+                  <td>{booking.car_name}</td>
+                  <td>{new Date(booking.start_date).toDateString()}</td>
+                  <td>{new Date(booking.end_date).toDateString()}</td>
+                  <td>₨ {booking.total_price}</td>
+                  <td><span className={`status ${booking.status}`}>{booking.status}</span></td>
+                  <td>
+                    <select 
+                      onChange={(e) => updateStatus(booking.id, e.target.value)} 
+                      value={booking.status}
+                      className="status-select"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Footer Component
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="container">
+        <div className="footer-content">
+          <div className="footer-col">
+            <h3>🚗 SwiftRide</h3>
+            <p>Your trusted partner for car rentals. Safe, reliable, and affordable.</p>
+          </div>
+          <div className="footer-col">
+            <h4>Quick Links</h4>
+            <ul>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/register">Register</Link></li>
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h4>Contact</h4>
+            <ul>
+              <li>📍 Islamabad, Pakistan</li>
+              <li>📞 +92 300 1234567</li>
+              <li>✉️ info@swiftride.com</li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>&copy; 2024 SwiftRide Rent a Car. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default App;
