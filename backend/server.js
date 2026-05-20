@@ -39,7 +39,7 @@ app.use('/uploads', express.static(uploadsDir));
 
 // CORS
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     credentials: true
 }));
 app.use(express.json());
