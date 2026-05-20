@@ -9,7 +9,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const SECRET = 'swiftride_secret_2024';
 
 // Create uploads folder
@@ -497,4 +497,9 @@ app.get('/api/admin/newsletter', (req, res) => {
     } catch (error) {
         res.status(401).json({ message: 'Invalid token' });
     }
+});
+// Start server - Bind to all network interfaces (required for Render)
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚗 SwiftRide Server on http://0.0.0.0:${PORT}`);
+    console.log(`📸 Uploads at http://localhost:5000/uploads`);
 });
