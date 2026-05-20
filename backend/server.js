@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }
 });
@@ -46,10 +46,11 @@ app.use(express.json());
 
 // Database connection
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'root1234',
-    database: 'car_rental'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root1234',
+    database: process.env.DB_NAME || 'car_rental',
+    port: process.env.DB_PORT || 3306
 });
 
 db.connect((err) => {
@@ -73,13 +74,13 @@ function validatePassword(password) {
 // ========== AUTH ROUTES ==========
 app.post('/api/register', async (req, res) => {
     const { name, email, password, phone } = req.body;
-    
+
     if (!validatePassword(password)) {
-        return res.status(400).json({ 
-            message: 'Password must be 8+ characters with uppercase, lowercase, number, and special character' 
+        return res.status(400).json({
+            message: 'Password must be 8+ characters with uppercase, lowercase, number, and special character'
         });
     }
-    
+
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
         db.query('INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)',
@@ -100,25 +101,25 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
-    
+
     db.query('SELECT * FROM users WHERE email = ?', [email], async (err, users) => {
         if (err || users.length === 0) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
-        
+
         const user = users[0];
         const validPassword = await bcrypt.compare(password, user.password);
-        
+
         if (!validPassword) {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
-        
+
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
             SECRET,
             { expiresIn: '24h' }
         );
-        
+
         res.json({
             token,
             user: {
@@ -133,15 +134,15 @@ app.post('/api/login', (req, res) => {
 
 app.post('/api/forgot-password', (req, res) => {
     const { email } = req.body;
-    
+
     db.query('SELECT * FROM users WHERE email = ?', [email], (err, users) => {
         if (err || users.length === 0) {
             return res.status(404).json({ message: 'Email not found' });
         }
-        
+
         const token = crypto.randomBytes(32).toString('hex');
         const expires = new Date(Date.now() + 3600000);
-        
+
         db.query('UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?',
             [token, expires, email],
             (err) => {
@@ -153,18 +154,18 @@ app.post('/api/forgot-password', (req, res) => {
 
 app.post('/api/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
-    
+
     if (!validatePassword(newPassword)) {
         return res.status(400).json({ message: 'Password requirements not met' });
     }
-    
+
     db.query('SELECT * FROM users WHERE reset_token = ? AND reset_expires > NOW()', [token], async (err, users) => {
         if (err || users.length === 0) {
             return res.status(400).json({ message: 'Invalid or expired token' });
         }
-        
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        
+
         db.query('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?',
             [hashedPassword, users[0].id],
             (err) => {
@@ -186,17 +187,17 @@ app.get('/api/cars', (req, res) => {
 app.post('/api/bookings', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         const { car_id, start_date, end_date } = req.body;
-        
+
         db.query('SELECT price_per_day FROM cars WHERE id = ?', [car_id], (err, cars) => {
             if (err || cars.length === 0) return res.status(404).json({ message: 'Car not found' });
-            
-            const days = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000*60*60*24));
+
+            const days = Math.ceil((new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24));
             const total = cars[0].price_per_day * days;
-            
+
             db.query('INSERT INTO bookings (user_id, car_id, start_date, end_date, total_price) VALUES (?, ?, ?, ?, ?)',
                 [decoded.id, car_id, start_date, end_date, total],
                 (err) => {
@@ -212,7 +213,7 @@ app.post('/api/bookings', (req, res) => {
 app.get('/api/my-bookings', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         db.query(`SELECT b.*, c.name as car_name, c.image_url 
@@ -233,7 +234,7 @@ app.get('/api/my-bookings', (req, res) => {
 app.put('/api/bookings/:id/cancel', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         db.query('UPDATE bookings SET status = "cancelled" WHERE id = ? AND user_id = ? AND status = "pending"',
@@ -251,11 +252,11 @@ app.put('/api/bookings/:id/cancel', (req, res) => {
 app.get('/api/admin/stats', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         const stats = {};
         db.query('SELECT COUNT(*) as count FROM users', (err, users) => {
             stats.totalUsers = users[0].count;
@@ -279,11 +280,11 @@ app.get('/api/admin/stats', (req, res) => {
 app.get('/api/admin/bookings', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         db.query(`SELECT b.*, u.name as user_name, c.name as car_name 
                   FROM bookings b 
                   JOIN users u ON b.user_id = u.id 
@@ -301,11 +302,11 @@ app.get('/api/admin/bookings', (req, res) => {
 app.put('/api/admin/bookings/:id/status', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         db.query('UPDATE bookings SET status = ? WHERE id = ?', [req.body.status, req.params.id], (err) => {
             if (err) return res.status(500).json({ message: 'Error' });
             res.json({ message: 'Status updated' });
@@ -319,15 +320,15 @@ app.put('/api/admin/bookings/:id/status', (req, res) => {
 app.post('/api/admin/cars', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         const { name, price_per_day, category, transmission, seats, image_url, status } = req.body;
-        
+
         let finalImageUrl = image_url || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400';
-        
+
         db.query('INSERT INTO cars (name, price_per_day, category, transmission, seats, image_url, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [name, price_per_day, category, transmission, seats, finalImageUrl, status || 'available'],
             (err) => {
@@ -342,13 +343,13 @@ app.post('/api/admin/cars', (req, res) => {
 app.put('/api/admin/cars/:id', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         const { name, price_per_day, category, transmission, seats, image_url, status } = req.body;
-        
+
         db.query('UPDATE cars SET name=?, price_per_day=?, category=?, transmission=?, seats=?, image_url=?, status=? WHERE id=?',
             [name, price_per_day, category, transmission, seats, image_url, status, req.params.id],
             (err) => {
@@ -363,11 +364,11 @@ app.put('/api/admin/cars/:id', (req, res) => {
 app.delete('/api/admin/cars/:id', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         db.query('DELETE FROM cars WHERE id = ?', [req.params.id], (err) => {
             if (err) return res.status(500).json({ message: 'Error deleting car' });
             res.json({ message: 'Car deleted successfully' });
@@ -396,11 +397,11 @@ app.listen(PORT, () => {
 app.get('/api/admin/newsletter', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         db.query('SELECT * FROM newsletter ORDER BY subscribed_at DESC', (err, results) => {
             if (err) return res.status(500).json({ message: 'Error' });
             res.json(results);
@@ -413,7 +414,7 @@ app.get('/api/admin/newsletter', (req, res) => {
 // Unsubscribe from newsletter
 app.delete('/api/newsletter/unsubscribe', (req, res) => {
     const { email } = req.body;
-    
+
     db.query('DELETE FROM newsletter WHERE email = ?', [email], (err) => {
         if (err) return res.status(500).json({ message: 'Error' });
         res.json({ message: 'Unsubscribed successfully!' });
@@ -423,16 +424,16 @@ app.delete('/api/newsletter/unsubscribe', (req, res) => {
 // Newsletter Subscribe
 app.post('/api/newsletter/subscribe', (req, res) => {
     const { email } = req.body;
-    
+
     if (!email) {
         return res.status(400).json({ message: 'Email is required' });
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Invalid email format' });
     }
-    
+
     db.query('INSERT INTO newsletter (email) VALUES (?)', [email], (err) => {
         if (err) {
             if (err.code === 'ER_DUP_ENTRY') {
@@ -451,16 +452,16 @@ app.post('/api/newsletter/subscribe', (req, res) => {
 app.post('/api/newsletter/subscribe', (req, res) => {
     const { email } = req.body;
     console.log('📧 Newsletter subscription:', email);
-    
+
     if (!email) {
         return res.status(400).json({ message: 'Email is required' });
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Invalid email format' });
     }
-    
+
     db.query('INSERT INTO newsletter (email) VALUES (?)', [email], (err) => {
         if (err) {
             if (err.code === 'ER_DUP_ENTRY') {
@@ -478,11 +479,11 @@ app.post('/api/newsletter/subscribe', (req, res) => {
 app.get('/api/admin/newsletter', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
+
     try {
         const decoded = jwt.verify(token, SECRET);
         if (decoded.role !== 'admin') return res.status(403).json({ message: 'Admin only' });
-        
+
         db.query('SELECT * FROM newsletter ORDER BY subscribed_at DESC', (err, results) => {
             if (err) return res.status(500).json({ message: 'Error' });
             res.json(results);
