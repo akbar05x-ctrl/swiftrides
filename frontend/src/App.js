@@ -15,7 +15,7 @@ import './App.css';
 const API = process.env.REACT_APP_API_URL ||
     (window.location.hostname === 'localhost'
         ? 'http://localhost:5000/api'
-        : 'https://swiftride-backend.up.railway.app/api');  // Change this to your Railway URL after deployment
+        : 'https://swiftrides-backend.onrender.com/api');
 const AuthContext = createContext();
 
 function App() {
