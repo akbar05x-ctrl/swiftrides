@@ -38,21 +38,34 @@ const upload = multer({
 app.use('/uploads', express.static(uploadsDir));
 
 // CORS
-// CORS
 app.use(cors({
-    origin: '*',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, postman, or curl)
+        if (!origin) return callback(null, true);
+        // Dynamically allow the request origin to satisfy credentials: true requirement
+        callback(null, true);
+    },
     credentials: true
 }));
 app.use(express.json());
 
 // Database connection
-const db = mysql.createConnection({
+const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'root1234',
     database: process.env.DB_NAME || 'car_rental',
     port: process.env.DB_PORT || 3306
-});
+};
+
+// Automatically enable SSL for non-localhost environments (e.g. Aiven MySQL)
+if (process.env.DB_SSL === 'true' || (process.env.DB_HOST && !process.env.DB_HOST.includes('localhost'))) {
+    dbConfig.ssl = {
+        rejectUnauthorized: false
+    };
+}
+
+const db = mysql.createConnection(dbConfig);
 
 db.connect((err) => {
     if (err) {
@@ -384,7 +397,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
-    const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     res.json({ imageUrl });
 });
 
