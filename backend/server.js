@@ -38,8 +38,9 @@ const upload = multer({
 app.use('/uploads', express.static(uploadsDir));
 
 // CORS
+// CORS
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://swiftrides-nine.vercel.app'],
+    origin: ['http://localhost:3000', 'https://swiftrides-app.netlify.app'],
     credentials: true
 }));
 app.use(express.json());
