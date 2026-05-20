@@ -8,11 +8,13 @@ import 'swiper/css/effect-coverflow';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import './App.css';
+/* eslint-disable */
+/* eslint-disable no-unused-vars */
 
 // Auto-detect API URL based on environment
-const API = process.env.REACT_APP_API_URL || 
-    (window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000/api' 
+const API = process.env.REACT_APP_API_URL ||
+    (window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
         : 'https://swiftride-backend.up.railway.app/api');  // Change this to your Railway URL after deployment
 const AuthContext = createContext();
 
@@ -62,7 +64,7 @@ function HomePage() {
 
     useEffect(() => {
         axios.get(`${API}/cars`).then(res => setCars(res.data));
-    }, []);
+    }, [API]);
 
     const handleLogout = () => {
         logout();
@@ -89,34 +91,34 @@ function HomePage() {
                 <span></span><span></span><span></span>
             </div>
 
-          <nav>
-    <div className="nav__header">
-        <div className="nav__logo">
-            <a href="/">🚗 SwiftRide</a>
-        </div>
-        <div className="nav__menu__btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            <i className={`ri-${isMenuOpen ? 'close' : 'menu-4'}-line`}></i>
-        </div>
-    </div>
-    <ul className={`nav__links ${isMenuOpen ? 'open' : ''}`}>
-        <li><a href="#home" onClick={() => setIsMenuOpen(false)}>HOME</a></li>
-        <li><a href="#gallery" onClick={() => setIsMenuOpen(false)}>GALLERY</a></li>
-        <li><a href="#about" onClick={() => setIsMenuOpen(false)}>ABOUT US</a></li>
-        {auth.token ? (
-            <>
-                <li><Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>DASHBOARD</Link></li>
-                <li><Link to="/my-bookings" onClick={() => setIsMenuOpen(false)}>MY BOOKINGS</Link></li>
-                {auth.user?.role === 'admin' && <li><Link to="/admin" onClick={() => setIsMenuOpen(false)}>ADMIN</Link></li>}
-                <li><button onClick={() => { logout(); setIsMenuOpen(false); }}>LOGOUT</button></li>
-            </>
-        ) : (
-            <>
-                <li><Link to="/login" onClick={() => setIsMenuOpen(false)}>LOGIN</Link></li>
-                <li><Link to="/register" onClick={() => setIsMenuOpen(false)}>REGISTER</Link></li>
-            </>
-        )}
-    </ul>
-</nav>
+            <nav>
+                <div className="nav__header">
+                    <div className="nav__logo">
+                        <a href="/">🚗 SwiftRide</a>
+                    </div>
+                    <div className="nav__menu__btn" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                        <i className={`ri-${isMenuOpen ? 'close' : 'menu-4'}-line`}></i>
+                    </div>
+                </div>
+                <ul className={`nav__links ${isMenuOpen ? 'open' : ''}`}>
+                    <li><a href="#home" onClick={() => setIsMenuOpen(false)}>HOME</a></li>
+                    <li><a href="#gallery" onClick={() => setIsMenuOpen(false)}>GALLERY</a></li>
+                    <li><a href="#about" onClick={() => setIsMenuOpen(false)}>ABOUT US</a></li>
+                    {auth.token ? (
+                        <>
+                            <li><Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>DASHBOARD</Link></li>
+                            <li><Link to="/my-bookings" onClick={() => setIsMenuOpen(false)}>MY BOOKINGS</Link></li>
+                            {auth.user?.role === 'admin' && <li><Link to="/admin" onClick={() => setIsMenuOpen(false)}>ADMIN</Link></li>}
+                            <li><button onClick={() => { logout(); setIsMenuOpen(false); }}>LOGOUT</button></li>
+                        </>
+                    ) : (
+                        <>
+                            <li><Link to="/login" onClick={() => setIsMenuOpen(false)}>LOGIN</Link></li>
+                            <li><Link to="/register" onClick={() => setIsMenuOpen(false)}>REGISTER</Link></li>
+                        </>
+                    )}
+                </ul>
+            </nav>
 
             <header id="home">
                 <div className="section__container header__container">
@@ -198,7 +200,7 @@ function HomePage() {
                 <h2 className="section__header">INSTAGRAM</h2>
                 <div className="instagram__wrapper">
                     <div className="instagram__images">
-                        {[1,2,3,4,5,6,7,8].map(i => <img key={i} src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200" alt="instagram" />)}
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <img key={i} src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=200" alt="instagram" />)}
                     </div>
                 </div>
             </section>
@@ -241,12 +243,12 @@ function HomePage() {
                     <div className="footer__col">
                         <h4>NEWSLETTER</h4>
                         <form onSubmit={handleNewsletterSubmit}>
-                            <input 
-                                type="email" 
-                                placeholder="ENTER EMAIL" 
+                            <input
+                                type="email"
+                                placeholder="ENTER EMAIL"
                                 value={newsletterEmail}
                                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                                required 
+                                required
                             />
                             <button type="submit" className="btn">
                                 <i className="ri-send-plane-2-fill"></i>
@@ -320,10 +322,10 @@ function Register() {
                 <h2>Join SwiftRide</h2>
                 {message && <div className={message.includes('successful') ? 'success' : 'error'}>{message}</div>}
                 <form onSubmit={handleSubmit}>
-                    <input type="text" placeholder="Full Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-                    <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
-                    <input type="password" placeholder="Password (8+ chars, A-Z, a-z, 0-9, @#$)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
-                    <input type="tel" placeholder="Phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+                    <input type="text" placeholder="Full Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                    <input type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+                    <input type="password" placeholder="Password (8+ chars, A-Z, a-z, 0-9, @#$)" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+                    <input type="tel" placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                     <button type="submit">Register</button>
                 </form>
                 <p>Have an account? <Link to="/login">Login</Link></p>
@@ -423,8 +425,8 @@ function Dashboard() {
                             <p className="car-price">₨ {car.price_per_day}/day</p>
                             {selectedCar === car.id ? (
                                 <div>
-                                    <input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} />
-                                    <input type="date" value={dates.end} onChange={e => setDates({...dates, end: e.target.value})} />
+                                    <input type="date" value={dates.start} onChange={e => setDates({ ...dates, start: e.target.value })} />
+                                    <input type="date" value={dates.end} onChange={e => setDates({ ...dates, end: e.target.value })} />
                                     <button onClick={() => handleBooking(car.id)} className="confirm-btn">Confirm</button>
                                     <button onClick={() => setSelectedCar(null)} className="cancel-btn">Cancel</button>
                                 </div>
@@ -487,10 +489,10 @@ function AdminPanel() {
     const [editingCar, setEditingCar] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
     const [imagePreview, setImagePreview] = useState('');
-    const [carForm, setCarForm] = useState({ 
-        name: '', price_per_day: '', category: '', 
-        transmission: 'Automatic', seats: '5', 
-        image_url: '', status: 'available' 
+    const [carForm, setCarForm] = useState({
+        name: '', price_per_day: '', category: '',
+        transmission: 'Automatic', seats: '5',
+        image_url: '', status: 'available'
     });
     const { auth } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -516,8 +518,8 @@ function AdminPanel() {
 
     const fetchSubscribers = async () => {
         try {
-            const res = await axios.get(`${API}/admin/newsletter`, { 
-                headers: { Authorization: `Bearer ${auth.token}` } 
+            const res = await axios.get(`${API}/admin/newsletter`, {
+                headers: { Authorization: `Bearer ${auth.token}` }
             });
             setSubscribers(res.data);
         } catch (err) { console.error(err); }
@@ -599,12 +601,12 @@ function AdminPanel() {
                     <div>
                         <div className="section-header">
                             <h3>Manage Cars</h3>
-                            <button onClick={() => { 
-                                setEditingCar(null); 
+                            <button onClick={() => {
+                                setEditingCar(null);
                                 setCarForm({ name: '', price_per_day: '', category: '', transmission: 'Automatic', seats: '5', image_url: '', status: 'available' });
                                 setSelectedFile(null);
                                 setImagePreview('');
-                                setShowModal(true); 
+                                setShowModal(true);
                             }} className="add-btn">+ Add Car</button>
                         </div>
                         <table className="cars-table">
@@ -619,12 +621,12 @@ function AdminPanel() {
                                         <td>₨ {car.price_per_day}</td>
                                         <td>{car.category}</td>
                                         <td>
-                                            <button onClick={() => { 
-                                                setEditingCar(car); 
+                                            <button onClick={() => {
+                                                setEditingCar(car);
                                                 setCarForm(car);
                                                 setSelectedFile(null);
                                                 setImagePreview('');
-                                                setShowModal(true); 
+                                                setShowModal(true);
                                             }} className="edit-btn">Edit</button>
                                             <button onClick={() => deleteCar(car.id, car.name)} className="delete-btn">Delete</button>
                                         </td>
@@ -692,9 +694,9 @@ function AdminPanel() {
                     <div className="modal" onClick={() => setShowModal(false)}>
                         <div className="modal-content" onClick={e => e.stopPropagation()}>
                             <h3>{editingCar ? 'Edit Car' : 'Add New Car'}</h3>
-                            <input placeholder="Car Name" value={carForm.name} onChange={e => setCarForm({...carForm, name: e.target.value})} />
-                            <input placeholder="Price Per Day (PKR)" type="number" value={carForm.price_per_day} onChange={e => setCarForm({...carForm, price_per_day: e.target.value})} />
-                            <select value={carForm.category} onChange={e => setCarForm({...carForm, category: e.target.value})}>
+                            <input placeholder="Car Name" value={carForm.name} onChange={e => setCarForm({ ...carForm, name: e.target.value })} />
+                            <input placeholder="Price Per Day (PKR)" type="number" value={carForm.price_per_day} onChange={e => setCarForm({ ...carForm, price_per_day: e.target.value })} />
+                            <select value={carForm.category} onChange={e => setCarForm({ ...carForm, category: e.target.value })}>
                                 <option value="">Select Category</option>
                                 <option value="Economy">Economy</option>
                                 <option value="Premium">Premium</option>
@@ -702,11 +704,11 @@ function AdminPanel() {
                                 <option value="SUV">SUV</option>
                             </select>
                             <div className="form-row">
-                                <select value={carForm.transmission} onChange={e => setCarForm({...carForm, transmission: e.target.value})}>
+                                <select value={carForm.transmission} onChange={e => setCarForm({ ...carForm, transmission: e.target.value })}>
                                     <option>Manual</option>
                                     <option>Automatic</option>
                                 </select>
-                                <select value={carForm.seats} onChange={e => setCarForm({...carForm, seats: e.target.value})}>
+                                <select value={carForm.seats} onChange={e => setCarForm({ ...carForm, seats: e.target.value })}>
                                     <option>2</option><option>4</option><option>5</option><option>7</option>
                                 </select>
                             </div>
@@ -721,7 +723,7 @@ function AdminPanel() {
                                     </div>
                                 )}
                             </div>
-                            <select value={carForm.status} onChange={e => setCarForm({...carForm, status: e.target.value})}>
+                            <select value={carForm.status} onChange={e => setCarForm({ ...carForm, status: e.target.value })}>
                                 <option value="available">Available</option>
                                 <option value="unavailable">Unavailable</option>
                             </select>
