@@ -39,7 +39,7 @@ app.use('/uploads', express.static(uploadsDir));
 
 // CORS
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://swiftrides-nine.vercel.app'],
+    origin: '*',
     credentials: true
 }));
 app.use(express.json());
