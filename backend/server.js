@@ -40,7 +40,7 @@ app.use('/uploads', express.static(uploadsDir));
 // CORS
 // CORS
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://swiftrides-app.netlify.app'],
+    origin: '*',
     credentials: true
 }));
 app.use(express.json());
